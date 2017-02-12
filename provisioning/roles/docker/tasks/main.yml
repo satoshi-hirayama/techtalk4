@@ -1,0 +1,88 @@
+- name: install packages
+  apt: name={{ item }} state=present
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+    - linux-image-extra-{{ ansible_kernel }}
+    - linux-image-extra-virtual
+  become: yes
+  tags: docker
+
+- name: Check proxy env
+  stat: path=/etc/apt/apt.conf.d/80proxy
+  register: under_proxy
+  tags: docker
+
+- name: add apt key (not proxy)
+  apt_key:
+    keyserver: hkp://p80.pool.sks-keyservers.net:80
+    id: 58118E89F3A912897C070ADBF76221572C52609D
+    state: present
+  become: yes
+  when: not under_proxy.stat.exists
+  tags: docker
+
+- name: add apt key (proxy)
+  apt_key:
+    keyserver: hkp://p80.pool.sks-keyservers.net:80
+    id: 58118E89F3A912897C070ADBF76221572C52609D
+    state: present
+  environment:
+    http_proxy: http://{{ proxy_ip }}:3128
+    https_proxy: https://{{ proxy_ip }}:3128
+  become: yes
+  when: under_proxy.stat.exists
+  tags: docker
+
+- name: add apt repository
+  apt_repository:
+    repo: deb https://apt.dockerproject.org/repo ubuntu-{{ ansible_lsb.codename|lower }} main
+    state: present
+    filename: docker
+  become: yes
+  tags: docker
+
+- name: update packages
+  apt: update_cache=yes
+  become: yes
+  tags: docker
+
+- name: install docker engine
+  apt: name=docker-engine state=present
+  become: yes
+  tags: docker
+
+- name: be sure docker is running and enabled
+  service: name=docker state=started enabled=yes
+  become: yes
+  tags: docker
+
+- name: install tools
+  pip: name={{ item }} state=present
+  with_items:
+    - setuptools
+    - docker-py
+    - docker-compose
+  become: yes
+  tags: docker
+
+- name: create docker service directory
+  file: path=/etc/systemd/system/docker.service.d state=directory
+  become: yes
+  tags: docker
+
+- name: set http proxy for docker
+  template: src=http-proxy.conf dest=/etc/systemd/system/docker.service.d/http-proxy.conf
+  become: yes
+  when: under_proxy.stat.exists
+  tags: docker
+
+- name: reload docker config
+  shell: systemctl daemon-reload
+  become: yes
+  tags: docker
+
+- name: restart docker
+  service: name=docker state=restarted
+  become: yes
+  tags: docker

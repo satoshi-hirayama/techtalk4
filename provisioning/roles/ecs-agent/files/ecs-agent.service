@@ -1,0 +1,12 @@
+[Unit]
+Description=ecs-agent
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/misc/bin/
+ExecStart=/opt/misc/bin/ecs-agent start
+ExecStop=/opt/misc/bin/ecs-agent stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=network-online.target

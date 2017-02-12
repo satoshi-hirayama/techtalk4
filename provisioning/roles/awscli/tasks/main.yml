@@ -1,0 +1,9 @@
+- name: Install awscli
+  pip: name=awscli state=present
+  become: yes
+
+- name: Create config directory
+  file: path=/home/{{ main_user }}/.aws state=directory owner={{ main_user }} group={{ main_user }}
+
+- name: Create config file
+  template: src=config dest=/home/{{ main_user }}/.aws/config owner={{ main_user }} group={{ main_user }} mode=0600

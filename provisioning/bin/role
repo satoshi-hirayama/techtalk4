@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+CWD=`dirname "${0}"`
+ROLES_DIR=${CWD/bin/roles}
+
+function help {
+  cecho 36 "This command is generate skelton role."
+  echo ""
+  cecho 36 "- generate usage: ${CWD}/role -n [role_name]"
+  exit 0
+}
+
+function cecho {
+  echo -e "\033[0;$1m$2\033[0;39m"
+}
+
+function run_and_print {
+  eval "$1"
+  cecho 35 "ran command: $1"
+}
+
+while getopts hn: OPT
+do
+  case $OPT in
+    'h' ) help ;;
+    'n' ) ROLE_NAME=$OPTARG ;;
+  esac
+done
+
+# Check role name.
+if [ -z ${ROLE_NAME+x} ]; then
+  help
+fi
+
+# Check role exists.
+if [ -e "${ROLES_DIR}/${ROLE_NAME}" ]; then
+  cecho 31 "Error: ${ROLES_DIR}/${ROLE_NAME} already exists."
+  exit 1
+fi
+
+cecho 32 "Making skelton role..."
+
+# Make role.
+run_and_print "mkdir ${ROLES_DIR}/${ROLE_NAME}"
+for DIR in 'tasks' 'handlers' 'templates' 'files' 'vars' 'defaults' 'meta' ; do
+  run_and_print "mkdir ${ROLES_DIR}/${ROLE_NAME}/${DIR}"
+  if [ ${DIR} = 'files' -o ${DIR} = 'templates' ]; then
+    run_and_print "touch ${ROLES_DIR}/${ROLE_NAME}/${DIR}/.keep"
+  else
+    run_and_print "touch ${ROLES_DIR}/${ROLE_NAME}/${DIR}/main.yml"
+  fi
+done
+run_and_print "echo \"# ${ROLE_NAME} of role\" > ${ROLES_DIR}/${ROLE_NAME}/README.md"
+
+cecho 32 "Finish!!"

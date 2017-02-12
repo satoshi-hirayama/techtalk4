@@ -1,0 +1,10 @@
+- name: Install Squid
+  apt: name=squid update_cache=yes cache_valid_time=3600
+
+- name: enable proxy
+  copy: src=../files/squid.conf dest=/etc/squid/squid.conf
+  become: yes
+  tags: squid
+
+- service: name=squid state=reloaded
+  tags: squid

@@ -1,0 +1,4 @@
+terraform.tfvars
+*ssh_key*
+!.keep
+.DS_Store

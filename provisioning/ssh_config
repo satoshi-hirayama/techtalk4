@@ -1,0 +1,13 @@
+Host techtalk-bastion
+  HostName <YOUR_BASTION_IP_HERE>
+  User ubuntu
+  IdentityFile ../terraform/ec2_bastion_instance_ssh_key
+  ForwardAgent yes
+  BatchMode yes
+  PasswordAuthentication no
+
+Host techtalk-ecs
+  HostName <YOUR_ECS_INSTANCE_IP_HERE>
+  User ubuntu
+  ProxyCommand ssh -F ./ssh_config -W %h:%p techtalk-bastion
+  IdentityFile ../terraform/ec2_app_instance_ssh_key

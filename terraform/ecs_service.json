@@ -1,0 +1,17 @@
+[
+  {
+    "name": "techtalk",
+    "image": "<YOUR_REPOSITORY_URL_HERE>",
+    "cpu": 10,
+    "memory": 512,
+    "essential": true,
+    "entryPoint": [],
+    "environment": [],
+    "portMappings": [
+      {
+        "containerPort": 80,
+        "hostPort": 80
+      }
+    ]
+  }
+]

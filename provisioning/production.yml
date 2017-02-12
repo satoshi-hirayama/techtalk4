@@ -1,0 +1,32 @@
+- name: install python2.7 to bastion
+  hosts: bastion
+  gather_facts: no
+  tasks:
+    - raw: sudo apt-get update && sudo apt-get install -qq python2.7
+
+- name: configure bastion environment
+  hosts: bastion
+  become: yes
+  roles:
+    - common
+    - squid
+  handlers:
+    - name: Restart Squid
+      service: name=squid state=restarted
+
+- name: set proxy environment to ecs instance and install python2.7
+  hosts: cluster
+  become: yes
+  gather_facts: no
+  tasks:
+    - raw: echo 'Acquire::ftp::proxy "ftp://{{ proxy_ip }}:3128";\nAcquire::http::proxy "http://{{ proxy_ip }}:3128";\nAcquire::https::proxy "http://{{ proxy_ip }}:3128";' > /etc/apt/apt.conf.d/80proxy
+    - raw: sudo apt-get update && sudo apt-get install -qq python2.7
+
+- name: configure ecs environment
+  hosts: cluster
+  roles:
+    - common
+    - squid-client
+    - awscli
+    - docker
+    - ecs-agent

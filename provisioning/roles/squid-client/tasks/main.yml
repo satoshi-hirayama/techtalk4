@@ -1,0 +1,42 @@
+- name: Set apt proxy
+  template: src=80proxy dest=/etc/apt/apt.conf.d/80proxy
+  become: yes
+
+- name: Set curl proxy (root)
+  template: src=.curlrc dest=/root/.curlrc
+  become: yes
+
+- name: Set curl proxy (user)
+  template: src=.curlrc dest=/home/{{ main_user }}/.curlrc
+
+- name: Set wget proxy
+  template: src=wgetrc dest=/etc/wgetrc
+  become: yes
+
+- name: Set bundle proxy (root)
+  template: src=.gemrc dest=/root/.gemrc
+  become: yes
+
+- name: Set bundle proxy (user)
+  template: src=.gemrc dest=/home/{{ main_user }}/.gemrc
+
+- name: Set git proxy (root)
+  template: src=.gitconfig dest=/root/.gitconfig
+  become: yes
+
+- name: Set git proxy (user)
+  template: src=.gitconfig dest=/home/{{ main_user }}/.gitconfig
+
+- name: Set HTTP_PROXY environment variable
+  lineinfile:
+    dest: /etc/environment
+    regexp: ^HTTP_PROXY=
+    line: HTTP_PROXY=http://{{ proxy_ip }}:3128
+  become: yes
+
+- name: Set HTTPS_PROXY environment variable
+  lineinfile:
+    dest: /etc/environment
+    regexp: ^HTTPS_PROXY=
+    line: HTTPS_PROXY=http://{{ proxy_ip }}:3128
+  become: yes

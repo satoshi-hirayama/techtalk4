@@ -1,0 +1,39 @@
+- name: update packages
+  apt: update_cache=yes
+  become: yes
+  tags: common
+
+- name: upgrade packages
+  apt: upgrade=dist
+  become: yes
+  tags: common
+
+- name: install utilities
+  apt: name={{ item }} state=present
+  with_items:
+    - wget
+  become: yes
+  tags: common
+
+- name: make user default directory
+  file: path=~/{{ item }} state=directory
+  with_items:
+    - tmp
+    - .bash.d
+  become: no
+  tags: common
+
+- name: create .ssh directory if it doesn't exist
+  file: path=~/.ssh state=directory
+  become: no
+  tags: common
+
+- name: create .ssh/config file
+  file: state=touch path=~/.ssh/config
+  become: no
+  tags: common
+
+- name: disable host key checking
+  lineinfile: dest=~/.ssh/config line='Host *\n \tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null'
+  become: no
+  tags: common

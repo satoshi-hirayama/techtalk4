@@ -1,0 +1,51 @@
+#!/bin/bash
+
+start() {
+  docker ps -a | grep ecs-agent
+
+  if [ $? = 0 ]; then
+    docker restart ecs-agent
+  else
+    export AWS_DEFAULT_REGION=$(ec2metadata --availability-zone | sed -e 's/.$//')
+    export ECS_CLUSTER={{ cluster_name }}
+
+    docker run --name {{ ecs_agent_container_name }} \
+    --detach={{ docker_detach }} \
+    --restart={{ docker_restart_policy }}{{ docker_restart_times }} \
+    --volume={{ volume_docker_sock }} \
+    --volume={{ volume_ecs_log }} \
+    --volume={{ volume_ecs_data }} \
+    --volume={{ volume_cgroup }} \
+    --volume={{ volume_docker_lib }} \
+    --net={{ netowrk_mode }} \
+    --env=ECS_LOGFILE={{ ecs_logfile }} \
+    --env=ECS_LOGLEVEL={{ ecs_loglevel }} \
+    --env=ECS_DATADIR={{ ecs_datadir }} \
+    --env=ECS_CLUSTER=$ECS_CLUSTER \
+    --env=ECS_ENABLE_TASK_IAM_ROLE={{ ecs_enable_task_iam_role }} \
+    --env=ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST={{ ecs_enable_task_iam_role_netowrk_host }} \
+    --env=ECS_RESERVED_PORTS={{ ecs_reserved_ports }} \
+    --env=ECS_CONTAINER_STOP_TIMEOUT={{ ecs_container_stop_timeout }} \
+    --env=HTTP_PROXY={{ proxy_ip }}:3128 \
+    --env=NO_PROXY={{ no_proxy }} \
+    {{ ecs_agent_image }}
+  fi
+}
+
+stop() {
+  docker stop ecs-agent
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  *)
+    echo "Usage: ecs-agent (start|stop)"
+    exit 1
+    ;;
+esac
+exit $?

@@ -1,0 +1,144 @@
+- name: sysctl
+  sysctl:
+    name: net.ipv4.conf.all.route_localnet
+    value: 1
+    state: present
+  become: yes
+  tags: ecs-agent
+
+- name: modify iptables (prerouting)
+  iptables:
+    table: nat
+    chain: PREROUTING
+    protocol: tcp
+    destination: 169.254.170.2
+    destination_port: 80
+    jump: DNAT
+    to_destination: 127.0.0.1:51679
+  become: yes
+  tags: ecs-agent
+
+- name: modify iptables (output)
+  iptables:
+    table: nat
+    chain: OUTPUT
+    protocol: tcp
+    match: tcp
+    destination: 169.254.170.2
+    destination_port: 80
+    jump: REDIRECT
+    to_ports: 51679
+  become: yes
+  tags: ecs-agent
+
+- name: set nat config
+  copy: src=../files/95-enable-nat.conf dest=/etc/sysctl.d/95-enable-nat.conf
+  become: yes
+  tags: ecs-agent
+
+- name: create log directory for ecs container agent
+  file: path=/var/log/ecs state=directory owner={{ main_user }} group={{ main_user }}
+  become: yes
+  tags: ecs-agent
+
+- name: create data directory for ecs container agent
+  file: path=/var/lib/ecs/data state=directory owner={{ main_user }} group={{ main_user }}
+  become: yes
+  tags: ecs-agent
+
+- name: Check proxy env
+  stat: path=/etc/apt/apt.conf.d/80proxy
+  register: under_proxy
+  tags: ecs-agent
+
+- name: ecs container agent (not proxy)
+  docker_container:
+    name: "{{ ecs_agent_container_name }}"
+    image: "{{ ecs_agent_image }}"
+    state: started
+    detach: "{{ docker_detach }}"
+    restart_policy: "{{ docker_restart_policy }}"
+    volumes:
+      - "{{ volume_docker_sock }}"
+      - "{{ volume_ecs_log }}"
+      - "{{ volume_ecs_data }}"
+      - "{{ volume_cgroup }}"
+      - "{{ volume_docker_lib }}"
+    network_mode: "{{ netowrk_mode }}"
+    env:
+      ECS_LOGFILE: "{{ ecs_logfile }}"
+      ECS_LOGLEVEL: "{{ ecs_loglevel }}"
+      ECS_DATADIR: "{{ ecs_datadir }}"
+      ECS_CLUSTER: "{{ cluster_name }}"
+      ECS_ENABLE_TASK_IAM_ROLE: "{{ ecs_enable_task_iam_role }}"
+      ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST: "{{ ecs_enable_task_iam_role_netowrk_host }}"
+      ECS_RESERVED_PORTS: "{{ ecs_reserved_ports }}"
+      ECS_CONTAINER_STOP_TIMEOUT: "{{ ecs_container_stop_timeout }}"
+  become: yes
+  when: not under_proxy.stat.exists
+  tags: ecs-agent
+
+- name: ecs container agent (proxy)
+  docker_container:
+    name: "{{ ecs_agent_container_name }}"
+    image: "{{ ecs_agent_image }}"
+    state: started
+    detach: "{{ docker_detach }}"
+    restart_policy: "{{ docker_restart_policy }}"
+    volumes:
+      - "{{ volume_docker_sock }}"
+      - "{{ volume_ecs_log }}"
+      - "{{ volume_ecs_data }}"
+      - "{{ volume_cgroup }}"
+      - "{{ volume_docker_lib }}"
+    network_mode: "{{ netowrk_mode }}"
+    env:
+      ECS_LOGFILE: "{{ ecs_logfile }}"
+      ECS_LOGLEVEL: "{{ ecs_loglevel }}"
+      ECS_DATADIR: "{{ ecs_datadir }}"
+      ECS_CLUSTER: "{{ cluster_name }}"
+      ECS_ENABLE_TASK_IAM_ROLE: "{{ ecs_enable_task_iam_role }}"
+      ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST: "{{ ecs_enable_task_iam_role_netowrk_host }}"
+      ECS_RESERVED_PORTS: "{{ ecs_reserved_ports }}"
+      ECS_CONTAINER_STOP_TIMEOUT: "{{ ecs_container_stop_timeout }}"
+      HTTP_PROXY: "{{ proxy_ip }}:3128"
+      NO_PROXY: "{{ no_proxy }}"
+  become: yes
+  when: under_proxy.stat.exists
+  tags: ecs-agent
+
+- name: create ecs agent service directory
+  file: path=/opt/misc/bin state=directory
+  become: yes
+  tags: ecs-agent
+
+- name: set ecs agent file (not proxy)
+  template: src=ecs-agent dest=/opt/misc/bin/ecs-agent mode=0755
+  become: yes
+  when: not under_proxy.stat.exists
+  tags: ecs-agent
+
+- name: set ecs agent file (proxy)
+  template: src=ecs-agent-proxy dest=/opt/misc/bin/ecs-agent mode=0755
+  become: yes
+  when: under_proxy.stat.exists
+  tags: ecs-agent
+
+- name: set ecs agent service file
+  copy: src=../files/ecs-agent.service dest=/etc/systemd/system/ecs-agent.service
+  become: yes
+  tags: ecs-agent
+
+- name: reload docker config
+  shell: systemctl daemon-reload
+  become: yes
+  tags: ecs-agent
+
+- name: restart ecs agent service
+  systemd:
+    name: ecs-agent
+    state: restarted
+    daemon_reload: yes
+    enabled: yes
+  become: yes
+  tags: ecs-agent

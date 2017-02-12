@@ -1,0 +1,22 @@
+main_user: ubuntu
+proxy_ip: 127.0.0.1
+ecs_agent_container_name: ecs-agent
+ecs_agent_image: amazon/amazon-ecs-agent:latest
+cluster_name: techtalk
+ecs_logfile: /log/ecs-agent.log
+ecs_loglevel: info
+ecs_datadir: /data
+ecs_enable_task_iam_role: true
+ecs_enable_task_iam_role_netowrk_host: true
+ecs_reserved_ports: [22, 2375, 2376, 51678]
+ecs_container_stop_timeout: 30s
+no_proxy: 169.254.169.254,169.254.170.2,/var/run/docker.sock
+volume_docker_sock: /var/run/docker.sock:/var/run/docker.sock
+volume_ecs_log: /var/log/ecs/:/log
+volume_ecs_data: /var/lib/ecs/data:/data
+volume_cgroup: /sys/fs/cgroup:/sys/fs/cgroup:ro
+volume_docker_lib: /var/run/docker/libcontainerd:/var/lib/docker/execdriver/native:ro
+netowrk_mode: host
+docker_detach: true
+docker_restart_policy: on-failure
+docker_restart_times: :10

@@ -1,0 +1,4 @@
+- name: install package
+  apt: name=python-pip state=present
+  become: yes
+  tags: pip

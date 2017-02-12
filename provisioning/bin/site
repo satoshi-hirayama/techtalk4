@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+CWD=`dirname "${0}"`
+ROOT_DIR=${CWD/bin/}
+
+function help {
+  cecho 36 "This command is generate default playbooks and inventry."
+  echo ""
+  cecho 36 "- generate usage: ${CWD}/site -n [site_name]"
+  cecho 36 "- delete   usage: ${CWD}/site -n [site_name] -d"
+  exit 0
+}
+
+function cecho {
+  echo -e "\033[0;$1m$2\033[0;39m"
+}
+
+function run_and_print {
+  eval "$1"
+  cecho 35 "ran command: $1"
+}
+
+while getopts hn:d OPT
+do
+  case $OPT in
+    'h' ) help ;;
+    'n' ) SITE_NAME=$OPTARG ;;
+    'd' ) DELETE_OPT=1 ;;
+  esac
+done
+
+# Check site name.
+if [ -z ${SITE_NAME+x} ]; then
+  help
+fi
+
+if [ -z ${DELETE_OPT+x} ]; then
+  # Check site playbook exists.
+  if [ -e "${ROOT_DIR}${SITE_NAME}.yml" ]; then
+    cecho 31 "Error: ${ROOT_DIR}${SITE_NAME}.yml already exists."
+    exit 1
+  fi
+
+  cecho 32 "Making default playbooks and inventry..."
+
+  # Make playbooks and inventory.
+  run_and_print "touch ${ROOT_DIR}${SITE_NAME}.yml"
+  for ENV in 'integration' 'production' ; do
+    run_and_print "touch ${ROOT_DIR}${ENV}.ini"
+    run_and_print "touch ${ROOT_DIR}group_vars/${SITE_NAME}-${ENV}.yml"
+  done
+else
+  cecho 32 "Removing default playbooks and inventry..."
+
+  # Remove playbooks and inventory.
+  run_and_print "rm -f ${ROOT_DIR}${SITE_NAME}.yml"
+  run_and_print "rm -rf ${ROOT_DIR}*.ini"
+  run_and_print "rm -f ${ROOT_DIR}group_vars/${SITE_NAME}-*"
+fi
+
+cecho 32 "Finish!!"
